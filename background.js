@@ -36,6 +36,20 @@ Clipboard = {
 		document.execCommand('copy');
 		document.oncopy = oncopyBackup;
 	},
+
+	writeHtml: function(plain, html){
+		clipboardBuffer.val(html);
+		clipboardBuffer.select();
+		
+		var oncopyBackup = document.oncopy;
+		document.oncopy = function(e){
+			e.preventDefault();
+			e.clipboardData.setData("text/html", html);
+			e.clipboardData.setData("text/plain", plain);
+		};
+		document.execCommand('copy');
+		document.oncopy = oncopyBackup;
+	},
 	
 	/**
 	* Retourne le contenu du presse papier (String)
@@ -84,6 +98,7 @@ Action = {
 			tabs = tabs_filtered;
 			
 			// Génération des données copiées
+			/*
 			if( format == 'html' ){
 				outputText = CopyTo.html(tabs);
 			} else if( format == 'custom' ) {
@@ -95,9 +110,11 @@ Action = {
 				outputText = CopyTo.text(tabs);
 				extended_mime = false;
 			}
+			*/
 			
 			// Copie la liste d'URL dans le presse papier
-			Clipboard.write(outputText, extended_mime);
+			//Clipboard.write(outputText, extended_mime);
+			Clipboard.writeHtml(CopyTo.markdown(tabs), CopyTo.html(tabs));
 			
 			// Indique à la popup le nombre d'URL copiées, pour affichage dans la popup
 			chrome.runtime.sendMessage({type: "copy", copied_url: tabs.length});
@@ -166,20 +183,9 @@ Action = {
 CopyTo = {
 	// Copie les URLs des onglets au format html
 	html: function(tabs){
-		var anchor = localStorage['anchor'] ? localStorage['anchor'] : 'url';
-		var row_anchor = '';
 		var s = '';
 		for (var i=0; i < tabs.length; i++) {
-			row_anchor = tabs[i].url;
-			if( anchor == 'title' ){
-				try{
-					Encoder.EncodeType = "entity";
-					row_anchor = Encoder.htmlEncode(tabs[i].title);
-				} catch(ex){
-					row_anchor = tabs[i].title;
-				}
-			}
-			s += '<a href="'+tabs[i].url+'">'+row_anchor+'</a><br/>';
+			s += '<a href="'+tabs[i].url+'">'+tabs[i].title+'</a><br/>';
 			s = s + "\n";
 		}
 		return s;
@@ -217,6 +223,15 @@ CopyTo = {
 		var s = '';
 		for (var i=0; i < tabs.length; i++) {
 			s += tabs[i].url;
+			s = s + "\n";
+		}
+		return s;
+	},
+
+	markdown: function(tabs){
+		var s = '';
+		for (var i=0; i < tabs.length; i++) {
+			s += "[" + tabs[i].title.replace(/[\[\]]/g, "\\$&") + "](" + tabs[i].url + ")  ";
 			s = s + "\n";
 		}
 		return s;
